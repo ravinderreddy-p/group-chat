@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from src.models import User, db
 
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "super-secret"
@@ -9,6 +10,17 @@ jwt = JWTManager(app)
 @app.route("/", methods=["GET"])
 def index():
     return "Welcome to Home page"
+
+
+@app.route('/api/users', methods=['POST'])
+def new_user():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    user = User(name=username)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    return "user"
 
 
 @app.route("/login", methods=["POST"])
