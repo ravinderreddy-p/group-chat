@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, abort
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, current_user
 from src.models import User, db, db_setup
 
@@ -28,35 +28,59 @@ def index():
 
 # Only ADMIN can add users, so this API should be accessed only by ADMIN users.
 @app.route('/user', methods=['POST'])
+@jwt_required()
 def new_user():
-    username = request.json.get('username')
-    password = request.json.get('password')
-    user = User.query.filter_by(name=username).first()
-    if user:
-        return jsonify({
-            "status": "fail",
-            "message": user.name + " already exists"
-        })
+    role = current_user.role
+    if role == 'admin':
+        username = request.json.get('username')
+        password = request.json.get('password')
+        user = User.query.filter_by(name=username).first()
+        if user:
+            return jsonify({
+                "status": "fail",
+                "message": user.name + " already exists"
+            })
 
-    user = User(name=username)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
+        user = User(name=username)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({
+            "user": username,
+            "status": "success"
+        })
     return jsonify({
-        "user": username,
-        "status": "success"
+        "status": "fail",
+        "message": "only admin can add new user"
     })
 
 
 @app.route('/user', methods=['PATCH'])
+@jwt_required()
 def update_user():
-    # username = request.json.get('username')
-    role = request.json.get('role')
-    user = User(role=role)
-    db.session.add(user)
-    db.session.commit()
+    role = current_user.role
+    if role == 'admin':
+        body = request.get_json()
+        if 'username' not in body:
+            abort(404)
+        user = User.query.filter_by(name=body['username']).one_or_none()
+        if user is None:
+            abort(404)
+        if 'role' in body:
+            user.role = body['role']
+        if 'password' in body:
+            password = body['password']
+            user.password_hash = user.generate_password_hash(password)
+
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "message": "user updated"
+        })
     return jsonify({
-        "message": "user updated"
+        "status": "fail",
+        "message": "Only Admin can update user details"
     })
 
 
@@ -82,7 +106,7 @@ def login():
 
 
 @app.route('/logout')
-@jwt_required
+@jwt_required()
 def logout():
     return 'User logged out successfully'
 
