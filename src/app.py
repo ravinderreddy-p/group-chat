@@ -58,7 +58,7 @@ def new_user():
         if user:
             return jsonify({
                 "status": "fail",
-                "message": user.name + " already exists"
+                "msg": user.name + " already exists"
             })
 
         user = User(name=username)
@@ -71,7 +71,7 @@ def new_user():
         })
     return jsonify({
         "status": "fail",
-        "message": "only admin can add new user"
+        "msg": "only admin can add new user"
     })
 
 
@@ -97,11 +97,11 @@ def update_user():
         db.session.commit()
         return jsonify({
             "status": "success",
-            "message": "user updated"
+            "msg": "user updated"
         })
     return jsonify({
         "status": "fail",
-        "message": "Only Admin can update user details"
+        "msg": "Only Admin can update user details"
     })
 
 
@@ -137,7 +137,6 @@ def logout():
 @app.route("/who_am_i", methods=["GET"])
 @jwt_required()
 def protected():
-    # We can now access our sqlalchemy User object via `current_user`.
     return jsonify(
         id=current_user.id,
         name=current_user.name,
