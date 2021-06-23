@@ -4,7 +4,7 @@ from datetime import timedelta
 import redis
 from flask import Flask, request, jsonify, make_response, abort
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, current_user, get_jwt
-from src.models import User, db, db_setup
+from src.models import User, db, db_setup, Group
 
 ACCESS_EXPIRES = timedelta(hours=1)
 
@@ -27,7 +27,7 @@ def user_lookup_callback(_jwt_header, jwt_data):
     return User.query.filter_by(id=identity).one_or_none()
 
 
-# Setup our redis connection for storing the blocklisted tokens
+# Setup redis connection for storing the blocklisted tokens
 jwt_redis_blocklist = redis.StrictRedis(
     host="localhost", port=6379, db=0, decode_responses=True
 )
@@ -131,7 +131,10 @@ def login():
 def logout():
     jti = get_jwt()["jti"]
     jwt_redis_blocklist.set(jti, "", ex=ACCESS_EXPIRES)
-    return jsonify(msg="Access token revoked")
+    return jsonify({
+        "status": "success",
+        "msg": "User logged out and Access token revoked"
+    })
 
 
 @app.route("/who_am_i", methods=["GET"])
@@ -143,6 +146,66 @@ def protected():
         role=current_user.role,
         pwd=current_user.password_hash,
     )
+
+
+@app.route("/group", methods=["POST"])
+@jwt_required()
+def create_group():
+    group_name = request.json.get("group_name", None)
+    group = Group.query.filter_by(name=group_name).first()
+    if group:
+        return jsonify({
+            "status": "fail",
+            "msg": group.name + " already exists"
+        })
+    group = Group(name=group_name, creator_id=current_user.id)
+    db.session.add(group)
+    db.session.commit()
+    return jsonify({
+        "group": group_name,
+        "status": "success"
+    })
+
+
+@app.route("/group", methods=["DELETE"])
+@jwt_required()
+def delete_group():
+    group_name = request.json.get("group_name", None)
+    group = Group.query.filter_by(name=group_name).one_or_none()
+    if group is None:
+        return jsonify({
+            "status": "fail",
+            "msg": group.name + " does not exists"
+        })
+    if group.creator_id != current_user.id:
+        return jsonify({
+            "status": "fail",
+            "msg": "You are not authorized to delete"
+        })
+    else:
+        Group.query.filter_by(name=group_name).delete()
+        db.session.commit()
+        return jsonify({
+            "msg": group_name + " deleted",
+            "status": "success"
+        })
+
+
+@app.route("/users/search", methods=["POST"])
+def search_users():
+    search_user_term = request.form.get('search_term', '')
+    print(search_user_term)
+    searched_user_list = User.query.filter(User.name.ilike(f'%{search_user_term}%')).all()
+    print('hi')
+    user_count = len(searched_user_list)
+    user_data = []
+    for user in searched_user_list:
+        user_data.append(user)
+
+    return jsonify({
+            "count": user_count,
+            # "user_data": user_data
+        })
 
 
 if __name__ == "__main__":

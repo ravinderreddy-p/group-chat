@@ -30,3 +30,10 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+class Group(db.Model):
+    __tablename__ = 'group'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), index=True, unique=True)
+    creator_id = db.Column(db.Integer)
+
+
