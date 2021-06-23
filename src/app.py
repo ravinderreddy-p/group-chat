@@ -10,7 +10,7 @@ ACCESS_EXPIRES = timedelta(hours=1)
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-app.config["JWT_SECRET_KEY"] = "super-secret"
+app.config["JWT_SECRET_KEY"] = "dd9244b79f969a0f297442075b9147d55ebf1c6f4cd283f5b1b18105c49486dcce4eb8510fe7d72954977307d81a0730a057dea573e3e8767535140e608845f9"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = ACCESS_EXPIRES
 db_setup(app)
 jwt = JWTManager(app)
