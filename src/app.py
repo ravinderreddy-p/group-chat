@@ -192,6 +192,7 @@ def delete_group():
 
 
 @app.route("/users/search", methods=["POST"])
+@jwt_required()
 def search_users():
     search_user_term = request.form.get('search_term', '')
     print(search_user_term)
@@ -200,11 +201,11 @@ def search_users():
     user_count = len(searched_user_list)
     user_data = []
     for user in searched_user_list:
-        user_data.append(user)
+        user_data.append(user.name)
 
     return jsonify({
             "count": user_count,
-            # "user_data": user_data
+            "user_data": user_data
         })
 
 
